@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TrafficSense v2 — Emergency AI System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+    :root{
+      --bg:#07070d;
+      --surface:#10101a;
+      --surface2:#181826;
+      --border:rgba(255,255,255,0.07);
+      --bh:rgba(255,255,255,0.14);
+      --text:#ededf5;
+      --muted:#5e5e78;
+      --accent:#c8ff00;
+      --acc-dim:rgba(200,255,0,0.08);
+      --red:#ff3b3b;
+      --amber:#ffaa00;
+      --green:#00e676;
+      --blue:#38bdf8;
+      --red-dim:rgba(255,59,59,0.12);
+      --amb-dim:rgba(255,170,0,0.12);
+      --grn-dim:rgba(0,230,118,0.12);
+    }
+
+    html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;font-size:14px;line-height:1.6;overflow-x:hidden}
+
+    body::before{
+      content:'';position:fixed;inset:0;
+      background-image:linear-gradient(rgba(200,255,0,0.022) 1px,transparent 1px),linear-gradient(90deg,rgba(200,255,0,0.022) 1px,transparent 1px);
+      background-size:56px 56px;pointer-events:none;z-index:0
+    }
+
+    .page{position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column}
+
+    /* ── HEADER ── */
+    header{padding:22px 44px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);backdrop-filter:blur(8px)}
+    .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:19px;letter-spacing:-.5px}
+    .logo span{color:var(--accent)}
+    .logo sub{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;font-weight:400;letter-spacing:1px;margin-left:4px;vertical-align:middle}
+    .badge{font-size:10px;color:var(--muted);border:1px solid var(--border);padding:4px 12px;border-radius:20px;letter-spacing:1px}
+    .badge.live{border-color:rgba(0,230,118,.3);color:var(--green)}
+    .badge.live::before{content:'● ';font-size:8px}
+
+    /* ── HERO ── */
+    .hero{padding:56px 44px 28px;max-width:740px}
+    .eyebrow{font-size:10px;letter-spacing:2.5px;color:var(--accent);text-transform:uppercase;margin-bottom:12px}
+    .hero h1{font-family:'Syne',sans-serif;font-size:clamp(30px,4.2vw,54px);font-weight:800;line-height:1.06;letter-spacing:-2px;margin-bottom:16px}
+    .hero h1 em{font-style:normal;color:var(--accent)}
+    .hero p{color:var(--muted);font-size:13px;max-width:500px;line-height:1.9}
+
+    /* ── ALERT BANNER ── */
+    .alert-banner{
+      margin:0 44px 0;padding:14px 20px;border-radius:12px;
+      border:1px solid rgba(255,59,59,.35);background:rgba(255,59,59,.1);
+      display:none;align-items:flex-start;gap:14px;
+      animation:slideDown .4s ease
+    }
+    .alert-banner.show{display:flex}
+    .alert-banner.ambulance{border-color:rgba(56,189,248,.35);background:rgba(56,189,248,.1)}
+    .alert-icon{font-size:24px;flex-shrink:0;margin-top:2px}
+    .alert-body{}
+    .alert-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:4px}
+    .alert-banner.accident .alert-title{color:var(--red)}
+    .alert-banner.ambulance .alert-title{color:var(--blue)}
+    .alert-msg{font-size:12px;color:var(--muted);line-height:1.7}
+    .alert-time{font-size:10px;color:var(--muted);margin-top:6px;letter-spacing:.5px}
+
+    /* ── MAIN GRID ── */
+    .main{flex:1;display:grid;grid-template-columns:1fr 370px;padding:28px 44px 60px}
+
+    .panel-left{padding-right:44px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:24px}
+    .panel-right{padding-left:36px;display:flex;flex-direction:column;gap:18px}
+
+    .slabel{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+
+    /* ── UPLOAD ── */
+    .upload-zone{
+      border:1.5px dashed rgba(255,255,255,.1);border-radius:14px;
+      padding:48px 28px;text-align:center;cursor:pointer;
+      transition:all .25s;background:var(--surface);position:relative;overflow:hidden
+    }
+    .upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:var(--acc-dim)}
+    .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .upload-icon{width:50px;height:50px;margin:0 auto 16px;border:1.5px solid rgba(255,255,255,.1);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--surface2);transition:border-color .25s}
+    .upload-zone:hover .upload-icon{border-color:var(--accent)}
+    .upload-lbl{font-family:'Syne',sans-serif;font-size:15px;font-weight:600;margin-bottom:7px}
+    .upload-sub{color:var(--muted);font-size:11px}
+    .upload-sub span{color:var(--accent)}
+
+    /* ── PREVIEW ── */
+    .preview-wrap{}
+    .preview-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .clear-btn{font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);padding:4px 12px;border-radius:6px;cursor:pointer;font-family:'DM Mono',monospace;transition:all .2s}
+    .clear-btn:hover{border-color:var(--red);color:var(--red)}
+    .preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+    .preview-thumb{aspect-ratio:1;border-radius:10px;overflow:hidden;position:relative;border:1px solid var(--border);background:var(--surface)}
+    .preview-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+    .thumb-rm{position:absolute;top:6px;right:6px;width:20px;height:20px;background:rgba(0,0,0,.75);border:none;border-radius:50%;color:#fff;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
+    .preview-thumb:hover .thumb-rm{opacity:1}
+
+    /* ── ANALYZE BTN ── */
+    .analyze-btn{
+      padding:15px 28px;background:var(--accent);color:#000;border:none;border-radius:12px;
+      font-family:'Syne',sans-serif;font-size:14px;font-weight:700;letter-spacing:.5px;
+      cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:10px
+    }
+    .analyze-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 24px rgba(200,255,0,.2)}
+    .analyze-btn:disabled{opacity:.3;cursor:not-allowed}
+    .spinner{width:14px;height:14px;border:2px solid rgba(0,0,0,.25);border-top-color:#000;border-radius:50%;animation:spin .7s linear infinite;display:none}
+    .analyze-btn.loading .spinner{display:block}
+    .analyze-btn.loading .btn-txt{opacity:.6}
+
+    /* ── RIGHT PANEL ── */
+
+    /* Traffic light */
+    .tl-wrap{display:flex;justify-content:center;padding:8px 0}
+    .traffic-light{
+      width:90px;background:#141420;border-radius:45px;padding:12px 16px;
+      border:2px solid #222232;display:flex;flex-direction:column;gap:11px;
+      box-shadow:0 0 0 5px #0c0c14,0 20px 50px rgba(0,0,0,.7);position:relative
+    }
+    .traffic-light::before{content:'';position:absolute;top:-22px;left:50%;transform:translateX(-50%);width:9px;height:22px;background:#222232;border-radius:3px 3px 0 0}
+    .light{width:56px;height:56px;border-radius:50%;background:#1a1a28;border:1px solid #26263a;transition:background .6s,box-shadow .6s;margin:0 auto}
+    .light.red-on  {background:var(--red);  box-shadow:0 0 22px 8px rgba(255,59,59,.45), inset 0 -4px 10px rgba(0,0,0,.25);border-color:transparent}
+    .light.amb-on  {background:var(--amber);box-shadow:0 0 22px 8px rgba(255,170,0,.45),inset 0 -4px 10px rgba(0,0,0,.25);border-color:transparent}
+    .light.grn-on  {background:var(--green);box-shadow:0 0 22px 8px rgba(0,230,118,.45),inset 0 -4px 10px rgba(0,0,0,.25);border-color:transparent}
+    .light.grn-on.pulse{animation:grnPulse 1.2s ease-in-out infinite}
+
+    /* Status card */
+    .status-card{border-radius:12px;border:1px solid var(--border);padding:16px 18px;background:var(--surface);transition:all .5s}
+    .status-card.high     {border-color:rgba(0,230,118,.3);background:var(--grn-dim)}
+    .status-card.medium   {border-color:rgba(255,170,0,.3);background:var(--amb-dim)}
+    .status-card.low      {border-color:rgba(255,59,59,.3);background:var(--red-dim)}
+    .status-card.ambulance{border-color:rgba(56,189,248,.4);background:rgba(56,189,248,.08)}
+    .status-card.accident {border-color:rgba(255,59,59,.5);background:rgba(255,59,59,.1)}
+    .sc-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+    .sc-value{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-1px}
+    .sc-value.high    {color:var(--green)}
+    .sc-value.medium  {color:var(--amber)}
+    .sc-value.low     {color:var(--red)}
+    .sc-value.ambulance{color:var(--blue)}
+    .sc-value.accident {color:var(--red)}
+    .sc-reason{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.7}
+
+    /* Metrics */
+    .metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .mc{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px}
+    .mc-label{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+    .mc-value{font-family:'Syne',sans-serif;font-size:20px;font-weight:700}
+    .mc-value.ok{color:var(--green)}.mc-value.warn{color:var(--amber)}.mc-value.danger{color:var(--red)}.mc-value.info{color:var(--blue)}
+
+    /* Confidence bar */
+    .conf-wrap{}
+    .conf-hdr{display:flex;justify-content:space-between;margin-bottom:7px}
+    .conf-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+    .conf-pct{font-size:11px;font-weight:500}
+    .conf-bg{height:5px;background:var(--surface2);border-radius:3px;overflow:hidden}
+    .conf-fill{height:100%;border-radius:3px;background:var(--accent);width:0%;transition:width .9s cubic-bezier(.16,1,.3,1)}
+
+    /* Detections row */
+    .detect-row{display:flex;gap:8px;flex-wrap:wrap}
+    .detect-chip{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;font-size:11px;border:1px solid var(--border);background:var(--surface);color:var(--muted)}
+    .detect-chip.active-amb{border-color:rgba(56,189,248,.4);background:rgba(56,189,248,.1);color:var(--blue)}
+    .detect-chip.active-acc{border-color:rgba(255,59,59,.4);background:rgba(255,59,59,.1);color:var(--red)}
+    .detect-chip.active-hig{border-color:rgba(0,230,118,.4);background:rgba(0,230,118,.1);color:var(--green)}
+
+    /* Log */
+    .log-wrap{}
+    .log-title{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+    .log-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:11px;color:var(--muted);line-height:2;max-height:130px;overflow-y:auto}
+    .log-entry{display:flex;gap:8px}
+    .log-time{color:var(--accent);min-width:60px;flex-shrink:0}
+    .log-entry.ok   .log-msg{color:var(--green)}
+    .log-entry.err  .log-msg{color:var(--red)}
+    .log-entry.warn .log-msg{color:var(--amber)}
+    .log-entry.info .log-msg{color:var(--blue)}
+
+    /* ── ALERTS HISTORY ── */
+    .alerts-section{padding:32px 44px;border-top:1px solid var(--border)}
+    .alerts-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    .alerts-title{font-family:'Syne',sans-serif;font-weight:700;font-size:16px}
+    .alerts-count{font-size:11px;color:var(--muted);border:1px solid var(--border);padding:3px 10px;border-radius:20px}
+    .alerts-empty{color:var(--muted);font-size:12px;padding:20px 0}
+    .alert-list{display:flex;flex-direction:column;gap:10px}
+    .alert-item{
+      background:var(--surface);border:1px solid var(--border);border-radius:12px;
+      padding:14px 18px;display:flex;gap:14px;align-items:flex-start
+    }
+    .alert-item.accident {border-color:rgba(255,59,59,.3)}
+    .ai-icon{font-size:20px;flex-shrink:0}
+    .ai-body{}
+    .ai-type{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;margin-bottom:4px}
+    .alert-item.accident .ai-type{color:var(--red)}
+    .alert-item.ambulance .ai-type{color:var(--blue)}
+    .ai-msg{font-size:11px;color:var(--muted);line-height:1.7}
+    .ai-meta{font-size:10px;color:var(--muted);margin-top:4px;opacity:.6}
+
+    /* ── HOW IT WORKS ── */
+    .how-section{padding:36px 44px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(4,1fr);gap:28px}
+    .how-num{font-family:'Syne',sans-serif;font-size:34px;font-weight:800;line-height:1;margin-bottom:10px;-webkit-text-stroke:1px var(--accent);color:transparent}
+    .how-title{font-family:'Syne',sans-serif;font-weight:600;font-size:13px;margin-bottom:5px}
+    .how-desc{font-size:11px;color:var(--muted);line-height:1.9}
+
+    /* IDLE */
+    .idle-wrap{display:flex;flex-direction:column;align-items:center;gap:18px;padding:16px 0;text-align:center}
+    .idle-dots{display:flex;gap:8px}
+    .idle-dot{width:16px;height:16px;border-radius:50%;background:var(--surface2);border:1px solid var(--border)}
+    .idle-txt{color:var(--muted);font-size:12px;line-height:1.8}
+
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes grnPulse{0%,100%{box-shadow:0 0 22px 8px rgba(0,230,118,.45)}50%{box-shadow:0 0 32px 14px rgba(0,230,118,.7)}}
+    .fade-up{animation:fadeUp .45s ease forwards}
+
+    @media(max-width:900px){
+      .main{grid-template-columns:1fr}
+      .panel-left{padding-right:0;border-right:none;border-bottom:1px solid var(--border);padding-bottom:28px}
+      .panel-right{padding-left:0;padding-top:24px}
+      header,.hero,.main,.alerts-section,.how-section{padding-left:18px;padding-right:18px}
+      .how-section{grid-template-columns:1fr 1fr}
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">Traffic<span>Sense</span><sub>v2.0</sub></div>
+    <div class="badge live" id="serverBadge">connecting...</div>
+  </header>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="eyebrow">// Emergency-Aware Traffic AI</div>
+    <h1>Smart signals.<br><em>Faster response.</em></h1>
+    <p>Detects ambulances, accidents, and congestion from uploaded images. Automatically turns the signal <strong style="color:#f0f0f5">green</strong> in critical cases and alerts the nearest government hospital.</p>
+  </div>
+
+  <!-- ALERT BANNER (shown on detection) -->
+  <div class="alert-banner" id="alertBanner">
+    <div class="alert-icon" id="alertIcon">🚨</div>
+    <div class="alert-body">
+      <div class="alert-title" id="alertTitle">Emergency Detected</div>
+      <div class="alert-msg" id="alertMsg">Signal has been turned GREEN. Hospital notified.</div>
+      <div class="alert-time" id="alertTime"></div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- LEFT -->
+    <div class="panel-left">
+      <div>
+        <div class="slabel">// Upload traffic image</div>
+        <div class="upload-zone" id="uploadZone">
+          <input type="file" id="fileInput" accept="image/*" multiple/>
+          <div class="upload-icon">📷</div>
+          <div class="upload-lbl">Drop images or click to browse</div>
+          <div class="upload-sub">JPG, PNG, WEBP — <span>multiple files OK</span></div>
+        </div>
+      </div>
+
+      <div class="preview-wrap" id="previewWrap" style="display:none">
+        <div class="preview-hdr">
+          <div class="slabel" style="margin-bottom:0">// Queue</div>
+          <button class="clear-btn" id="clearBtn">Clear all</button>
+        </div>
+        <div class="preview-grid" id="previewGrid"></div>
+      </div>
+
+      <button class="analyze-btn" id="analyzeBtn" disabled>
+        <div class="spinner"></div>
+        <span class="btn-txt">Analyze Traffic</span>
+        <span id="btnArr">→</span>
+      </button>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="panel-right">
+      <div class="slabel">// Live result</div>
+
+      <!-- IDLE -->
+      <div class="idle-wrap" id="idleWrap">
+        <div class="idle-dots"><div class="idle-dot"></div><div class="idle-dot"></div><div class="idle-dot"></div></div>
+        <div class="traffic-light">
+          <div class="light"></div>
+          <div class="light"></div>
+          <div class="light"></div>
+        </div>
+        <div class="idle-txt">Upload an image and click<br>Analyze to see the result.</div>
+      </div>
+
+      <!-- RESULT -->
+      <div id="resultWrap" style="display:none">
+        <div class="tl-wrap">
+          <div class="traffic-light">
+            <div class="light" id="lRed"></div>
+            <div class="light" id="lAmb"></div>
+            <div class="light" id="lGrn"></div>
+          </div>
+        </div>
+
+        <div class="status-card" id="statusCard">
+          <div class="sc-label">Signal status</div>
+          <div class="sc-value" id="scValue">—</div>
+          <div class="sc-reason" id="scReason">—</div>
+        </div>
+
+        <div class="detect-row" id="detectRow"></div>
+
+        <div class="metrics">
+          <div class="mc"><div class="mc-label">Images</div><div class="mc-value" id="mImages">—</div></div>
+          <div class="mc"><div class="mc-label">Level</div><div class="mc-value" id="mLevel">—</div></div>
+          <div class="mc"><div class="mc-label">Ambulance</div><div class="mc-value" id="mAmb">—</div></div>
+          <div class="mc"><div class="mc-label">Accident</div><div class="mc-value" id="mAcc">—</div></div>
+        </div>
+
+        <div class="conf-wrap">
+          <div class="conf-hdr">
+            <span class="conf-lbl">Model confidence</span>
+            <span class="conf-pct" id="confPct">0%</span>
+          </div>
+          <div class="conf-bg"><div class="conf-fill" id="confFill"></div></div>
+        </div>
+
+        <div class="log-wrap">
+          <div class="log-title">// Analysis log</div>
+          <div class="log-box" id="logBox"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ALERTS HISTORY -->
+  <div class="alerts-section">
+    <div class="alerts-hdr">
+      <div class="alerts-title">Emergency Alert History</div>
+      <div class="alerts-count" id="alertCount">0 alerts</div>
+    </div>
+    <div id="alertsEmpty" class="alerts-empty">No emergency alerts yet. Alerts appear here when accidents are detected.</div>
+    <div class="alert-list" id="alertList"></div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div class="how-section">
+    <div>
+      <div class="how-num">01</div>
+      <div class="how-title">Upload image</div>
+      <div class="how-desc">Select traffic camera images. Multiple files are analyzed and votes are aggregated.</div>
+    </div>
+    <div>
+      <div class="how-num">02</div>
+      <div class="how-title">AI detection</div>
+      <div class="how-desc">Your Python model checks for ambulances, accidents, and vehicle density in each frame.</div>
+    </div>
+    <div>
+      <div class="how-num">03</div>
+      <div class="how-title">Signal decision</div>
+      <div class="how-desc">🟢 Green if high traffic, ambulance, or accident detected. 🟡 Amber = medium. 🔴 Red = low.</div>
+    </div>
+    <div>
+      <div class="how-num">04</div>
+      <div class="how-title">Hospital alert</div>
+      <div class="how-desc">On accident detection the system instantly sends an alert (SMS via Twilio) to the nearest hospital.</div>
+    </div>
+  </div>
+
+</div><!-- .page -->
+
+<script>
+const API = 'http://localhost:5000'; // change if backend runs on a different port
+
+// ── Elements ──────────────────────────────────────────────────────────────────
+const fileInput   = document.getElementById('fileInput');
+const uploadZone  = document.getElementById('uploadZone');
+const previewWrap = document.getElementById('previewWrap');
+const previewGrid = document.getElementById('previewGrid');
+const clearBtn    = document.getElementById('clearBtn');
+const analyzeBtn  = document.getElementById('analyzeBtn');
+const idleWrap    = document.getElementById('idleWrap');
+const resultWrap  = document.getElementById('resultWrap');
+const logBox      = document.getElementById('logBox');
+const alertBanner = document.getElementById('alertBanner');
+
+let files = [];
+
+// ── Server health check ───────────────────────────────────────────────────────
+async function checkServer() {
+  try {
+    const r = await fetch(`${API}/health`, {signal: AbortSignal.timeout(2500)});
+    if (r.ok) {
+      const badge = document.getElementById('serverBadge');
+      badge.textContent = 'server online';
+      badge.className = 'badge live';
+    }
+  } catch { /* silent */ }
+}
+checkServer();
+setInterval(checkServer, 10000);
+
+// ── Drag & drop ───────────────────────────────────────────────────────────────
+uploadZone.addEventListener('dragover',  e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault(); uploadZone.classList.remove('drag-over');
+  addFiles([...e.dataTransfer.files]);
+});
+fileInput.addEventListener('change', () => addFiles([...fileInput.files]));
+
+function addFiles(incoming) {
+  incoming.filter(f => f.type.startsWith('image/')).forEach(f => {
+    if (!files.find(x => x.name === f.name && x.size === f.size)) files.push(f);
+  });
+  renderPreviews();
+}
+
+function renderPreviews() {
+  previewGrid.innerHTML = '';
+  if (!files.length) { previewWrap.style.display = 'none'; analyzeBtn.disabled = true; return; }
+  previewWrap.style.display = 'block'; analyzeBtn.disabled = false;
+  files.forEach((f, i) => {
+    const div = document.createElement('div'); div.className = 'preview-thumb';
+    const img = document.createElement('img'); img.src = URL.createObjectURL(f);
+    const btn = document.createElement('button'); btn.className = 'thumb-rm'; btn.innerHTML = '✕';
+    btn.onclick = e => { e.stopPropagation(); files.splice(i,1); renderPreviews(); };
+    div.appendChild(img); div.appendChild(btn); previewGrid.appendChild(div);
+  });
+}
+clearBtn.addEventListener('click', () => { files = []; fileInput.value = ''; renderPreviews(); });
+
+// ── ANALYZE ───────────────────────────────────────────────────────────────────
+analyzeBtn.addEventListener('click', async () => {
+  if (!files.length) return;
+  setLoading(true);
+  logBox.innerHTML = '';
+  idleWrap.style.display = 'none';
+  resultWrap.style.display = 'none';
+  hideBanner();
+
+  addLog('info', `Sending ${files.length} image(s) to backend...`);
+
+  try {
+    const results = [];
+    for (let i = 0; i < files.length; i++) {
+      addLog('info', `Processing: ${files[i].name}`);
+      const fd = new FormData(); fd.append('image', files[i]);
+      const res = await fetch(`${API}/predict`, { method: 'POST', body: fd });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      results.push({ ...data, filename: files[i].name });
+      addLog(
+        data.ambulance ? 'warn' : data.accident ? 'err' : 'ok',
+        `${files[i].name} → signal=${data.signal} | amb=${data.ambulance} | acc=${data.accident} | conf=${Math.round((data.confidence||0)*100)}%`
+      );
+      // Show hospital alert if accident in this frame
+      if (data.accident && data.alert) addAlertToHistory(data.alert);
+    }
+
+    // Aggregate
+    const agg = aggregate(results);
+    showResult(agg, files.length);
+    addLog(agg.ambulance||agg.accident ? 'warn' : 'ok', `Final → signal=${agg.signal.toUpperCase()} | reason="${agg.reason}"`);
+
+    // Show banner
+    if (agg.ambulance) showBanner('ambulance', '🚑 Ambulance Detected!', 'Traffic signal forced GREEN. Please clear the lane immediately.', new Date());
+    else if (agg.accident) showBanner('accident', '🚨 Accident Detected!', 'Signal forced GREEN. Emergency alert sent to nearest hospital.', new Date());
+
+  } catch(err) {
+    addLog('err', `Cannot reach backend (${err.message}). Running demo mode.`);
+    await sleep(900);
+    const demo = demoScenario();
+    showResult({ ...demo, reason: demoReason(demo) }, files.length);
+    if (demo.accident) addAlertToHistory({ type:'ROAD ACCIDENT', image: files[0]?.name || 'demo.jpg', timestamp: new Date().toISOString(), status:'[DEMO] logged', message:'Demo accident alert logged.' });
+    if (demo.ambulance) showBanner('ambulance','🚑 [DEMO] Ambulance Detected','Signal forced GREEN for emergency clearance.', new Date());
+    else if (demo.accident) showBanner('accident','🚨 [DEMO] Accident Detected','Signal forced GREEN. Hospital alert sent.', new Date());
+  }
+
+  setLoading(false);
+});
+
+// ── Result rendering ──────────────────────────────────────────────────────────
+function showResult(r, imgCount) {
+  resultWrap.style.display = 'block';
+  resultWrap.classList.add('fade-up');
+
+  // Traffic light
+  const isEmergency = r.ambulance || r.accident;
+  document.getElementById('lRed').className = 'light' + (r.signal==='red'   ? ' red-on' : '');
+  document.getElementById('lAmb').className = 'light' + (r.signal==='amber' ? ' amb-on' : '');
+  document.getElementById('lGrn').className = 'light' + (r.signal==='green' ? ' grn-on' + (isEmergency?' pulse':'') : '');
+
+  // Status card
+  const card = document.getElementById('statusCard');
+  const val  = document.getElementById('scValue');
+  const cls  = r.ambulance ? 'ambulance' : r.accident ? 'accident' : r.signal==='green' ? 'high' : r.signal==='amber' ? 'medium' : 'low';
+  card.className = `status-card ${cls}`;
+  val.className  = `sc-value ${cls}`;
+  val.textContent = r.ambulance ? '🚑 AMBULANCE' : r.accident ? '🚨 ACCIDENT' : r.signal==='green' ? 'HIGH TRAFFIC' : r.signal==='amber' ? 'MEDIUM TRAFFIC' : 'LOW TRAFFIC';
+  document.getElementById('scReason').textContent = r.reason || '';
+
+  // Detection chips
+  const row = document.getElementById('detectRow');
+  row.innerHTML = '';
+  const chips = [
+    { label:'🚑 Ambulance', active: r.ambulance, cls:'active-amb' },
+    { label:'🚨 Accident',  active: r.accident,  cls:'active-acc' },
+    { label:'🟢 High Traffic', active: r.signal==='green' && !r.ambulance && !r.accident, cls:'active-hig' },
+  ];
+  chips.forEach(c => {
+    const d = document.createElement('div');
+    d.className = `detect-chip ${c.active ? c.cls : ''}`;
+    d.textContent = c.label;
+    row.appendChild(d);
+  });
+
+  // Metrics
+  document.getElementById('mImages').textContent = imgCount;
+  const lv = document.getElementById('mLevel'); lv.textContent = r.level; lv.className = `mc-value ${r.level==='high'?'ok':r.level==='medium'?'warn':'danger'}`;
+  const ma = document.getElementById('mAmb'); ma.textContent = r.ambulance ? 'YES' : 'NO'; ma.className = `mc-value ${r.ambulance?'info':''}`;
+  const mac = document.getElementById('mAcc'); mac.textContent = r.accident ? 'YES' : 'NO'; mac.className = `mc-value ${r.accident?'danger':''}`;
+
+  // Confidence
+  const pct = Math.round((r.confidence||0) * 100);
+  document.getElementById('confPct').textContent = pct + '%';
+  setTimeout(() => { document.getElementById('confFill').style.width = pct + '%'; }, 80);
+}
+
+function aggregate(results) {
+  // Emergency takes priority
+  const hasAmb = results.some(r => r.ambulance);
+  const hasAcc = results.some(r => r.accident);
+  const votes = {}; let totConf = 0;
+  results.forEach(r => { votes[r.signal] = (votes[r.signal]||0)+1; totConf += (r.confidence||0); });
+  const signal = hasAmb||hasAcc ? 'green' : (Object.entries(votes).sort((a,b)=>b[1]-a[1])[0][0]);
+  const avgConf = totConf / results.length;
+  const first = results[0];
+  return { signal, level: first.level, ambulance: hasAmb, accident: hasAcc, confidence: avgConf, reason: first.reason };
+}
+
+// ── Banner ────────────────────────────────────────────────────────────────────
+function showBanner(type, title, msg, date) {
+  alertBanner.className = `alert-banner show ${type}`;
+  document.getElementById('alertIcon').textContent  = type==='ambulance' ? '🚑' : '🚨';
+  document.getElementById('alertTitle').textContent = title;
+  document.getElementById('alertMsg').textContent   = msg;
+  document.getElementById('alertTime').textContent  = 'Detected at ' + date.toLocaleTimeString();
+  alertBanner.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+function hideBanner() { alertBanner.className = 'alert-banner'; }
+
+// ── Alert history ─────────────────────────────────────────────────────────────
+function addAlertToHistory(a) {
+  const list  = document.getElementById('alertList');
+  const empty = document.getElementById('alertsEmpty');
+  const count = document.getElementById('alertCount');
+  empty.style.display = 'none';
+  const div = document.createElement('div');
+  div.className = `alert-item accident`;
+  div.innerHTML = `
+    <div class="ai-icon">🚨</div>
+    <div class="ai-body">
+      <div class="ai-type">${a.type || 'EMERGENCY'}</div>
+      <div class="ai-msg">${a.message || 'Emergency detected. Hospital alerted.'}</div>
+      <div class="ai-meta">${a.timestamp} · Status: ${a.status} · Image: ${a.image}</div>
+    </div>`;
+  list.prepend(div);
+  const n = list.children.length;
+  count.textContent = `${n} alert${n!==1?'s':''}`;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function setLoading(v) {
+  analyzeBtn.disabled = v;
+  analyzeBtn.classList.toggle('loading', v);
+  document.getElementById('btnArr').style.display = v ? 'none' : '';
+}
+function addLog(type, msg) {
+  const d = document.createElement('div'); d.className = `log-entry ${type}`;
+  const n = new Date();
+  const t = `${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+  d.innerHTML = `<span class="log-time">${t}</span><span class="log-msg">${msg}</span>`;
+  logBox.appendChild(d); logBox.scrollTop = logBox.scrollHeight;
+}
+function pad(n){ return String(n).padStart(2,'0'); }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function demoScenario() {
+  const s = [
+    { signal:'green',  level:'high',   ambulance:false, accident:false, confidence:.91 },
+    { signal:'green',  level:'high',   ambulance:true,  accident:false, confidence:.94 },
+    { signal:'green',  level:'medium', ambulance:false, accident:true,  confidence:.88 },
+    { signal:'amber',  level:'medium', ambulance:false, accident:false, confidence:.77 },
+    { signal:'red',    level:'low',    ambulance:false, accident:false, confidence:.83 },
+  ];
+  return s[Math.floor(Math.random()*s.length)];
+}
+function demoReason(r) {
+  if (r.ambulance) return '🚑 [DEMO] Ambulance detected — signal forced GREEN.';
+  if (r.accident)  return '🚨 [DEMO] Accident detected — signal GREEN + hospital alerted.';
+  if (r.signal==='green')  return '🟢 [DEMO] High traffic — signal is GREEN.';
+  if (r.signal==='amber') return '🟡 [DEMO] Medium traffic — signal is AMBER.';
+  return '🔴 [DEMO] Low traffic — signal is RED.';
+}
+</script>
+</body>
+</html>
